@@ -28,11 +28,11 @@ config NET_SAMPLE_MQTT_BROKER_PORT
 
 config NET_SAMPLE_MQTT_PUB_TOPIC
 	string "The MQTT topic the application should publish data to"
-	default "zephyr_sample/sensor"
+	default "brake/state"
 
 config NET_SAMPLE_MQTT_SUB_TOPIC_CMD
 	string "The MQTT topic the application will receive commands on"
-	default "zephyr_sample/command"
+	default "brake/request"
 
 config NET_SAMPLE_MQTT_PUBLISH_INTERVAL
 	int "Interval between MQTT publishes (in seconds)"

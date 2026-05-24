@@ -1,9 +1,3 @@
-/*
- * Copyright (c) 2024 Analog Devices, Inc.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 #ifndef __MQTT_CLIENT_H__
 #define __MQTT_CLIENT_H__
 

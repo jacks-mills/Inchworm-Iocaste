@@ -3,8 +3,9 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/net/mqtt.h>
 
-#include "wifi.h"
 #include "mqtt_client.h"
+#include "wifi.h"
+#include "brake.h"
 
 LOG_MODULE_REGISTER(wifi_app, LOG_LEVEL_INF);
 
@@ -24,6 +25,15 @@ int main(void)
     int error = 0;
 
     printk("BRAKE CONTROLLER\n");
+
+    printk("Initialising brake\n");
+    error = brake_init();
+    if (error) {
+        printk("Brake init failed [error: %i]\n", error);
+        return error;
+    }
+
+    brake_set(0);
 
     printk("Initialising wifi\n");
     wifi_init();
@@ -54,9 +64,24 @@ int main(void)
 
     printk("Connected!\n");
 
+    printk("Subscribing to MQTT topics\n");
+    error = app_mqtt_subscribe(&client_ctx);
+	if (error) {
+        printk("MQTT failed to subscribe [error: %i]\n", error);
+        return error;
+	}
+
+
+    int percentage = 0;
     while (1) {
-        k_sleep(K_MSEC(1000));
-        printk("God I love busy waiting\n");
+        percentage++;
+        percentage = percentage % 100;
+
+        printk("sp: %i\n", percentage);
+        printk("bp: %i\n", brake_set(percentage));
+        (void) app_mqtt_publish(&client_ctx);
+
+        k_sleep(K_MSEC(300));
     }
 
     return 0;

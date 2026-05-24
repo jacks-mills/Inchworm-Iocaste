@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Train Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      margin: 20px;
+      background-color: #e8f1fa;
+      color: #222;
+    }
+    h1 {
+      text-align: center;
+      font-weight: 700;
+    }
+    .image-container {
+      width: 640px;
+      height: 480px;
+      background-color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+      border: 1px solid #cdd9e5;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    #stream-image {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .row-bottom {
+      display: flex;
+      width: 640px;
+      margin: 20px auto 0 auto;
+      gap: 20px;
+      align-items: stretch;
+    }
+    .row-right,
+    .row-left {
+      flex: 1;
+    }
+    .row-left {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .row-right {
+      background-color: #fff;
+      border: 1px solid #cdd9e5;
+      border-radius: 12px;
+      padding: 20px;
+      font-size: 18px;
+      line-height: 1.8;
+    }
+    .lever-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+    }
+    #brake-button {
+      width: 100%;
+      background-color: red;
+      color: white;
+      font-size: 32px;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      padding: 20px 0;
+    }
+    #brake-button:active {
+      background-color: darkred;
+    }
+    #lever-arm {
+      transition: transform 0.15s ease-out;
+    }
+  </style>
+</head>
+<body>
+<h1>Train Monitor</h1>
+<div class="display">
+    <div class="row-top">
+        <div class="image-container">
+            <img id="stream-image" src="" alt="no image" />
+        </div>
+    </div>
+    <div class="row-bottom">
+        <div class="row-right">
+            <div class="distance">
+                Distance to object: <span id="stream-distance">0</span> m
+            </div>
+            <div class="brake-percentage">
+                Brake percentage: <span id="stream-brake-percentage">0</span> %
+            </div>
+            <div class="lever-container">
+                <svg viewBox="0 0 160 160" width="160" height="160">
+                    <!-- base -->
+                    <rect x="34" y="110" width="110" height="24" rx="4" fill="#555" />
+                    <!-- brake arm -->
+                    <g id="lever-arm" transform="rotate(0 40 120)">
+                        <rect x="34" y="20" width="12" height="100" rx="5" fill="#222" />
+                    </g>
+                    <!-- pivot -->
+                    <circle cx="40" cy="120" r="6" fill="#aaa" stroke="#333" stroke-width="2" />
+                </svg>
+            </div>
+        </div>
+        <div class="row-left">
+            <button id="brake-button" type="button">BRAKE</button>
+        </div>
+    </div>
+</div>
+<script>
+  const stream = new EventSource('/stream');
+  const image = document.getElementById('stream-image');
+  const brakePercentage = document.getElementById('stream-brake-percentage');
+  const distance = document.getElementById('stream-distance');
+  const leverArm = document.getElementById('lever-arm');
+
+  const MAX_ANGLE = 90; // degrees the lever swings at 100% (lies flat into the base)
+
+  function updateLever(percent) {
+    const angle = (percent / 100) * MAX_ANGLE;
+    leverArm.setAttribute('transform', `rotate(${angle} 40 120)`);
+  }
+
+  stream.onmessage = function(e) {
+    const colon = e.data.indexOf(':');
+    const type = e.data.slice(0, colon);
+    const payload = e.data.slice(colon + 1);
+    console.log(`type:${type} payload length:${payload.length} payload preview:${payload.slice(0, 50)}`);
+    if (type === 'brake-percentage') {
+      brakePercentage.textContent = payload;
+      updateLever(parseFloat(payload));
+    } else if (type === 'image') {
+      const [mime_type, base64_img] = payload.split(',', 2);
+      image.src = `data:${mime_type};base64,${base64_img}`;
+    } else if (type === 'distance') {
+      distance.textContent = payload;
+    }
+  };
+  const brakeButton = document.getElementById('brake-button');
+  brakeButton.addEventListener('click', function() {
+    fetch('/brake', { method: 'POST' });
+  });
+</script>
+</body>
+</html>
