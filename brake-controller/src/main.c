@@ -12,13 +12,6 @@ LOG_MODULE_REGISTER(wifi_app, LOG_LEVEL_INF);
 /* MQTT client struct */
 static struct mqtt_client client_ctx;
 
-/* MQTT publish work item */
-//struct k_work_delayable mqtt_publish_work;
-
-//static struct net_mgmt_event_callback net_l4_mgmt_cb;
-
-/* Network connection semaphore */
-//K_SEM_DEFINE(net_conn_sem, 0, 1);
 
 int main(void)
 {

@@ -1,3 +1,47 @@
+
 &wifi {
     status = "okay";
+};
+
+/ {
+	zephyr,user {
+		io-channels = <&adc0 0>;
+	};
+};
+
+&adc0 {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	channel@0 {
+		reg = <0>;
+		zephyr,gain = "ADC_GAIN_1_4";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,resolution = <12>;
+	};
+};
+
+
+&pinctrl {
+    ledc0_custom: ledc0_custom {
+        group1 {
+            pinmux = <LEDC_CH0_GPIO5>;
+            output-enable;
+        };
+    };
+};
+
+&ledc0 {
+    pinctrl-0 = <&ledc0_custom>;
+    pinctrl-names = "default";
+    status = "okay";
+    #address-cells = <1>;
+    #size-cells = <0>;
+
+    channel0@0 {
+        reg = <0x0>;
+        timer = <0>;
+    };
 };
