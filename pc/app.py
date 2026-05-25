@@ -7,6 +7,7 @@ import json
 import time
 import glob, os
 import paho.mqtt.client as paho
+import paho.mqtt.publish as publish
 
 
 
@@ -14,6 +15,8 @@ app = Flask(__name__)
 
 subscribers_lock = threading.Lock()
 subscribers = []  # subscribers receiveing data from index_stream
+
+MQTT_BROKER_HOSTNAME = "172.20.10.10"
 
 
 @app.route("/", methods=["GET"])
@@ -38,7 +41,11 @@ def index_stream():
 
 @app.route("/brake", methods=["POST"])
 def brake():
-    print("brake pressed")
+    message = {"message type": "brake request", "data": 100}
+    publish.single(
+            topic="brake/request",
+            payload=json.dumps(message),
+            hostname=MQTT_BROKER_HOSTNAME)
     return "", 204
 
 def broadcast(msg):
