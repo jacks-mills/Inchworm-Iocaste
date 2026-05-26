@@ -2,7 +2,7 @@
 #define __BRAKE_H__
 
 
-/* Initialise brake and appropriate devices */
+/* initialise brake and appropriate devices */
 int brake_init(void);
 
 /* set the desired brake percentage. returns old percentage */
