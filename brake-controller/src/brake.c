@@ -6,7 +6,7 @@
 #include <zephyr/drivers/adc.h>
 #include "brake.h"
 
-LOG_MODULE_REGISTER(brake_controller, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(brake_controller, LOG_LEVEL_NONE);
 
 #define BRAKE_THREAD_STACK_SIZE 2048
 #define BRAKE_THREAD_PRIORITY   5

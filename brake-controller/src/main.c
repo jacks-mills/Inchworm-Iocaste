@@ -4,11 +4,13 @@
 #include "ble_service.h"
 #include "brake.h"
 #include "request_handler.h"
+#include "uart.h"
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
 int main(void)
 {
+    char tx_buf[MSG_SIZE] = { 0 };
     int ret = 0;
 
     printk("Starting in...\n");
@@ -27,6 +29,13 @@ int main(void)
     }
     brake_set(0);
 
+    printk("Initialising UART\n");
+    error = uart_init();
+    if (error) {
+        printk("UART init failed [error: %i]\n", error);
+        return error;
+    }
+
     printk("Initialising BLE\n");
     error = ble_service_init();
     if (error) {
@@ -39,8 +48,16 @@ int main(void)
     struct brake_request request = { 0 };
 
     while (1) {
+        if (k_msgq_get(&uart_msgq, &tx_buf, K_NO_WAIT) == 0) {
+            printk("UART Received: %s\n", &tx_buf);
+            error = handle_request(tx_buf, sizeof(tx_buf));
+            if (error) {
+                LOG_WRN("UART handle_request() failed");
+            }
+        }
+
         if (!ble_connected) {
-            printk("Not connected. Trying again\n");
+            //printk("Not connected. Trying again\n");
             k_msleep(500);
             continue;
         }
