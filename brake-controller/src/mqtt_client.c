@@ -7,6 +7,7 @@ LOG_MODULE_REGISTER(app_mqtt, LOG_LEVEL_DBG);
 #include <zephyr/data/json.h>
 #include <zephyr/random/random.h>
 
+#include "request_handler.h"
 #include "mqtt_client.h"
 #include "brake.h"
 
@@ -23,6 +24,10 @@ static struct sockaddr_storage broker;
 /* Socket descriptor */
 static struct zsock_pollfd fds[1];
 static int nfds;
+
+
+/* semaphore used to request publishing in app_mqtt_run */
+K_SEM_DEFINE(mqtt_publish_req, 0, 1);
 
 
 /* JSON brake state format */
@@ -84,6 +89,8 @@ static inline void on_mqtt_disconnect(void)
     LOG_INF("Disconnected from MQTT broker");
 }
 
+//static void handle_
+
 /** Called when an MQTT payload is received.
  *  Reads the payload and calls the commands
  *  handler if a payloads is received on the
@@ -110,7 +117,7 @@ static void on_mqtt_publish(struct mqtt_client *const client, const struct mqtt_
     /* If the topic is a command, call the command handler  */
     if (strcmp(evt->param.publish.message.topic.topic.utf8,
             CONFIG_NET_SAMPLE_MQTT_SUB_TOPIC_CMD) == 0) {
-        return; /* dummy line */
+        (void) handle_request(payload, sizeof(payload));
     }
 }
 
@@ -193,6 +200,8 @@ static void mqtt_event_handler(struct mqtt_client *const client, const struct mq
 
     case MQTT_EVT_PUBLISH:
         const struct mqtt_publish_param *p = &evt->param.publish;
+
+        LOG_INF("Publish event triggered");
 
         if (p->message.topic.qos == MQTT_QOS_1_AT_LEAST_ONCE) {
             const struct mqtt_puback_param ack_param = {
@@ -280,6 +289,7 @@ int app_mqtt_publish(struct mqtt_client *client)
     rc = get_mqtt_payload(&payload);
     if (rc != 0) {
         LOG_ERR("Failed to get MQTT payload [%d]", rc);
+        return rc;
     }
 
     param.message.topic = topic;
@@ -291,11 +301,13 @@ int app_mqtt_publish(struct mqtt_client *client)
     rc = mqtt_publish(client, &param);
     if (rc != 0) {
         LOG_ERR("MQTT Publish failed [%d]", rc);
+        return rc;
     }
 
-    LOG_INF("Published to topic '%s', QoS %d",
+    LOG_INF("Published to topic '%s', QoS %d [message id %i]",
             param.message.topic.topic.utf8,
-            param.message.topic.qos);
+            param.message.topic.qos,
+            param.message_id);
 
     return rc;
 }
@@ -363,16 +375,28 @@ int app_mqtt_process(struct mqtt_client *client)
 
 void app_mqtt_run(struct mqtt_client *client)
 {
-    int rc;
+    bool internal_elapsed = false, publish_request = false;
+    int64_t last_published = k_uptime_get();
+    int rc = 0;
 
     /* Subscribe to MQTT topics */
     app_mqtt_subscribe(client);
 
     /* Thread will primarily remain in this loop */
     while (mqtt_connected) {
+        /* process any input that may have been received, and keep connection alive */
         rc = app_mqtt_process(client);
         if (rc != 0) {
             break;
+        }
+
+        internal_elapsed = k_uptime_get() - last_published >= CONFIG_NET_SAMPLE_MQTT_PUBLISH_INTERVAL_MS;
+        publish_request = (k_sem_take(&mqtt_publish_req, K_NO_WAIT) == 0);
+
+        if (internal_elapsed || publish_request) {
+            printk("Publishing\n");
+            app_mqtt_publish(client);
+            last_published = k_uptime_get();
         }
     }
     /* Gracefully close connection */

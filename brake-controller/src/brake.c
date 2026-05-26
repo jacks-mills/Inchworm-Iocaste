@@ -18,7 +18,8 @@ static k_tid_t brake_tid = NULL;
 #define PWM_NODE DT_NODELABEL(ledc0)
 #define PWM_CHANNEL 0
 #define PWM_PERIOD PWM_USEC(20000)
-const struct device *servo = DEVICE_DT_GET(PWM_NODE);
+
+const struct device *const servo = DEVICE_DT_GET(PWM_NODE);
 
 static const struct adc_dt_spec pot = ADC_DT_SPEC_GET(DT_PATH(zephyr_user));
 
@@ -34,18 +35,15 @@ static void brake_thread(void *arg1, void *arg2, void *arg3) {
         .buffer_size = sizeof(adc_buf),
     };
 
-    while (1) {
-        int32_t val_mv;
+    (void)adc_sequence_init_dt(&pot, &sequence);
 
-		pwm_set(servo, PWM_CHANNEL, PWM_PERIOD, PWM_PERIOD / 20, 0); // 50% duty
-		k_sleep(K_MSEC(1000));
-		pwm_set(servo, PWM_CHANNEL, PWM_PERIOD, PWM_PERIOD / 10, 0); // 10% duty
-		k_sleep(K_MSEC(1000));
+    while (1) {
+        int32_t val_raw = 0, val_mv = 0;
+        int brake_percentage = (int) atomic_get(&desired_percentage);
 
         LOG_INF("ADC reading[%u]: %s channel %d: ",
                 count++, pot.dev->name, pot.channel_id);
 
-        (void)adc_sequence_init_dt(&pot, &sequence);
 
         error = adc_read_dt(&pot, &sequence);
         if (error < 0) {
@@ -54,20 +52,26 @@ static void brake_thread(void *arg1, void *arg2, void *arg3) {
             continue;
         }
 
-        val_mv = pot.channel_cfg.differential
+        val_raw = pot.channel_cfg.differential
             ? (int32_t)((int16_t)adc_buf)
             : (int32_t)adc_buf;
-
-        printk("%" PRId32, val_mv);
+        val_mv = val_raw;
 
         error = adc_raw_to_millivolts_dt(&pot, &val_mv);
         if (error < 0) {
-            printk(" (value in mV not available)\n");
+            LOG_INF("%" PRId32 " (value in mV not available)", val_raw);
         } else {
-            printk(" = %" PRId32 " mV\n", val_mv);
+            LOG_INF("%" PRId32 " = %" PRId32 " mV\n", val_raw, val_mv);
         }
 
-        k_sleep(K_MSEC(1000));
+		pwm_set(
+                servo,
+                PWM_CHANNEL,
+                PWM_PERIOD,
+                (brake_percentage != 0) ? (PWM_PERIOD / 20) : 0,
+                0);
+
+        k_sleep(K_MSEC(100));
     }
 }
 

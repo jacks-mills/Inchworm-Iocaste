@@ -9,7 +9,7 @@ LOG_MODULE_REGISTER(pwm_shell, LOG_LEVEL_INF);
 
 #define PWM_NODE    DT_NODELABEL(ledc0)
 #define PWM_CHANNEL 0
-#define PWM_PERIOD  PWM_USEC(20000)  /* 50 Hz */
+#define PWM_PERIOD  PWM_USEC(2000)  /* 500 Hz */
 
 static const struct device *pwm_dev = DEVICE_DT_GET(PWM_NODE);
 static uint32_t current_duty_cycle = 0; /* 0–100 % */

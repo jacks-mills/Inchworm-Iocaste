@@ -41,7 +41,18 @@ def index_stream():
 
 @app.route("/brake", methods=["POST"])
 def brake():
-    message = {"message type": "brake request", "data": 100}
+    print("brake pressed")
+    message = {"message_type": "brake request", "sender": "pc", "percentage": 100}
+    publish.single(
+            topic="brake/request",
+            payload=json.dumps(message),
+            hostname=MQTT_BROKER_HOSTNAME)
+    return "", 204
+
+@app.route("/release", methods=["POST"])
+def release():
+    print("released pressed")
+    message = {"message_type": "brake request", "sender": "pc", "percentage": 0}
     publish.single(
             topic="brake/request",
             payload=json.dumps(message),
