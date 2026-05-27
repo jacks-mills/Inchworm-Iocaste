@@ -59,8 +59,19 @@ static void serial_cb(const struct device *dev, void *user_data)
 	}
 }
 
+void print_uart(char *buf)
+{
+	int msg_len = strlen(buf);
+
+	for (int i = 0; i < msg_len; i++) {
+		uart_poll_out(uart_dev, buf[i]);
+	}
+}
+
 int uart_init(void)
 {
+	char tx_buf[MSG_SIZE];
+
 	if (!device_is_ready(uart_dev)) {
 		LOG_ERR("UART is not ready");
 		return -1;
@@ -78,6 +89,8 @@ int uart_init(void)
 		}
 		return ret;
 	}
+
+	print_uart("Hello! I'm your echo bot.\r\n");
 
 	uart_irq_rx_enable(uart_dev);
     return ret;

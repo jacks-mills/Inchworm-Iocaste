@@ -32,9 +32,6 @@ static struct k_work notify_work;
 /* TX buffer for JSON-encoded brake state */
 static char tx_buf[128];
 
-/* ---------------------------------------------------------------------------
- * JSON brake state encode
- * ---------------------------------------------------------------------------*/
 struct brake_state_json {
     char *message_type;
     int   data;
@@ -45,9 +42,6 @@ static const struct json_obj_descr brake_state_descr[] = {
     JSON_OBJ_DESCR_PRIM(struct brake_state_json, data,         JSON_TOK_NUMBER),
 };
 
-/* ---------------------------------------------------------------------------
- * Advertising data — name in adv packet, NUS UUID in scan response
- * ---------------------------------------------------------------------------*/
 static const struct bt_data ad[] = {
     BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
     BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
@@ -57,9 +51,6 @@ static const struct bt_data sd[] = {
     BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_NUS_SRV_VAL),
 };
 
-/* ---------------------------------------------------------------------------
- * Work handler — sends the current brake state over NUS
- * ---------------------------------------------------------------------------*/
 static void do_notify(struct k_work *work)
 {
     ARG_UNUSED(work);
@@ -92,9 +83,6 @@ static void do_notify(struct k_work *work)
     }
 }
 
-/* ---------------------------------------------------------------------------
- * NUS callbacks
- * ---------------------------------------------------------------------------*/
 static void on_nus_notif_enabled(bool enabled, void *ctx)
 {
     ARG_UNUSED(ctx);
@@ -131,9 +119,6 @@ static struct bt_nus_cb nus_cb = {
     .received      = on_nus_received,
 };
 
-/* ---------------------------------------------------------------------------
- * MTU exchange
- * ---------------------------------------------------------------------------*/
 static void mtu_exchange_cb(struct bt_conn *conn, uint8_t att_err,
                             struct bt_gatt_exchange_params *params)
 {
@@ -144,9 +129,6 @@ static void mtu_exchange_cb(struct bt_conn *conn, uint8_t att_err,
     }
 }
 
-/* ---------------------------------------------------------------------------
- * Connection callbacks
- * ---------------------------------------------------------------------------*/
 static void on_connected(struct bt_conn *conn, uint8_t err)
 {
     if (err) {
@@ -190,10 +172,6 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
     .connected    = on_connected,
     .disconnected = on_disconnected,
 };
-
-/* ---------------------------------------------------------------------------
- * Public API
- * ---------------------------------------------------------------------------*/
 
 int ble_service_notify_state(void)
 {
