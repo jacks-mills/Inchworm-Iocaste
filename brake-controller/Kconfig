@@ -34,8 +34,8 @@ config NET_SAMPLE_MQTT_SUB_TOPIC_CMD
 	string "The MQTT topic the application will receive commands on"
 	default "brake/request"
 
-config NET_SAMPLE_MQTT_PUBLISH_INTERVAL
-	int "Interval between MQTT publishes (in seconds)"
+config NET_SAMPLE_MQTT_PUBLISH_INTERVAL_MS
+	int "Interval between MQTT publishes (in ms)"
 	default 3
 	help
 	  This config determines the frequency at which MQTT publishes occur.

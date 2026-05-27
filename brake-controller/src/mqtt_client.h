@@ -8,6 +8,9 @@
 /** MQTT connection status flag */
 extern bool mqtt_connected;
 
+/** semaphore used to request publishing in app_mqtt_run */
+extern struct k_sem mqtt_publish_req;
+
 /**
  *  @brief Initialise the MQTT client & broker configuration
  */

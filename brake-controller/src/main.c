@@ -1,80 +1,79 @@
-/* source: https://hub.mender.io/t/connectivity-with-zephyr-part-1-wifi-on-esp32-s3/8130 */
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/net/mqtt.h>
 
-#include "mqtt_client.h"
-#include "wifi.h"
+#include "ble_service.h"
 #include "brake.h"
+#include "request_handler.h"
+#include "uart.h"
 
-LOG_MODULE_REGISTER(wifi_app, LOG_LEVEL_INF);
-
-/* MQTT client struct */
-static struct mqtt_client client_ctx;
-
+LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
 int main(void)
 {
-    int error = 0;
+    char tx_buf[MSG_SIZE] = { 0 };
+    int ret = 0;
+
+    printk("Starting in...\n");
+    for (int i = 5; i > 0; i--) {
+        printk("%i\n", i);
+        k_sleep(K_MSEC(1000));
+    }
 
     printk("BRAKE CONTROLLER\n");
 
     printk("Initialising brake\n");
-    error = brake_init();
+    int error = brake_init();
     if (error) {
         printk("Brake init failed [error: %i]\n", error);
         return error;
     }
-
     brake_set(0);
 
-    printk("Initialising wifi\n");
-    wifi_init();
-
-    printk("Connecting...\n");
-    error = wifi_connect();
+    printk("Initialising UART\n");
+    error = uart_init();
     if (error) {
-        printk("Failed to connect [error: %i]\n", error);
+        printk("UART init failed [error: %i]\n", error);
         return error;
     }
 
-    printk("Get IP address\n");
-    error = wifi_wait_for_ip_addr();
+    printk("Initialising BLE\n");
+    error = ble_service_init();
     if (error) {
-        printk("IP address wait timed out [error: %i]\n", error);
+        printk("BLE init failed [error: %i]\n", error);
         return error;
     }
 
-    printk("Initialising MQTT\n");
-	error = app_mqtt_init(&client_ctx);
-	if (error) {
-        printk("MQTT failed to initialise [error: %i]\n", error);
-        return error;
-	}
+    printk("Waiting for BLE connection…\n");
 
-    printk("Connecting to broker\n");
-	app_mqtt_connect(&client_ctx); /* block until MQTT connection is up */
+    struct brake_request request = { 0 };
 
-    printk("Connected!\n");
-
-    printk("Subscribing to MQTT topics\n");
-    error = app_mqtt_subscribe(&client_ctx);
-	if (error) {
-        printk("MQTT failed to subscribe [error: %i]\n", error);
-        return error;
-	}
-
-
-    int percentage = 0;
     while (1) {
-        percentage++;
-        percentage = percentage % 100;
+        if (k_msgq_get(&uart_msgq, &tx_buf, K_NO_WAIT) == 0) {
+            printk("UART Received: %s\n", &tx_buf);
+            error = handle_request(tx_buf, sizeof(tx_buf));
+            if (error) {
+                LOG_WRN("UART handle_request() failed");
+            }
+        }
 
-        printk("sp: %i\n", percentage);
-        printk("bp: %i\n", brake_set(percentage));
-        (void) app_mqtt_publish(&client_ctx);
+        if (!ble_connected) {
+            //printk("Not connected. Trying again\n");
+            k_msleep(500);
+            continue;
+        }
 
-        k_sleep(K_MSEC(300));
+        ret = k_msgq_get(&requests, &request, K_MSEC(600));
+        if (ret != 0) {
+            (void)ble_service_notify_state();
+            continue;
+        }
+
+        printk("Received request from %s (percentage: %i)\n",
+               request.sender, request.percentage);
+
+        /* Apply the requested brake percentage and notify */
+        (void)brake_set(request.percentage);
+        (void)ble_service_notify_state();
     }
 
     return 0;

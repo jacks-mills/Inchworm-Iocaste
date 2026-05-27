@@ -81,6 +81,23 @@
     #lever-arm {
       transition: transform 0.15s ease-out;
     }
+    #release-button {
+      width: 100%;
+      background-color: green;
+      color: white;
+      font-size: 32px;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      padding: 20px 0;
+    }
+    #release-button:active {
+      background-color: darkgreen;
+    }
+    #lever-arm {
+      transition: transform 0.15s ease-out;
+    }
   </style>
 </head>
 <body>
@@ -114,6 +131,7 @@
         </div>
         <div class="row-left">
             <button id="brake-button" type="button">BRAKE</button>
+            <button id="release-button" type="button">RELEASE</button>
         </div>
     </div>
 </div>
@@ -149,6 +167,10 @@
   const brakeButton = document.getElementById('brake-button');
   brakeButton.addEventListener('click', function() {
     fetch('/brake', { method: 'POST' });
+  });
+  const releaseButton = document.getElementById('release-button');
+  releaseButton.addEventListener('click', function() {
+    fetch('/release', { method: 'POST' });
   });
 </script>
 </body>
