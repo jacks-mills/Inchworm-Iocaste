@@ -17,19 +17,19 @@ LOG_MODULE_REGISTER(ble_service, LOG_LEVEL_DBG);
 #define DEVICE_NAME     CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
-/* Connection status flag */
+/* connection status flag */
 volatile bool ble_connected = false;
 
 static struct bt_conn *current_conn = NULL;
 static struct bt_gatt_exchange_params mtu_params;
 
-/* NUS notifications enabled flag */
+/* nus notifications enabled flag */
 static bool notifications_enabled = false;
 
-/* Work item — defers bt_nus_send() out of NUS/BLE callback context */
+/* work item. defers bt_nus_send() out of nus/ble callback context */
 static struct k_work notify_work;
 
-/* TX buffer for JSON-encoded brake state */
+/* tx buffer for json-encoded brake state */
 static char tx_buf[128];
 
 struct brake_state_json {

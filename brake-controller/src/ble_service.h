@@ -7,7 +7,6 @@ int ble_service_init(void);
 
 int ble_service_notify_state(void);
 
-/* true while a central is connected. */
-extern volatile bool ble_connected;
+extern volatile bool ble_connected; /* true while a central is connected. */
 
 #endif /* __BLE_SERVICE_H__ */
