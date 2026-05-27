@@ -142,7 +142,7 @@
   const distance = document.getElementById('stream-distance');
   const leverArm = document.getElementById('lever-arm');
 
-  const MAX_ANGLE = 90; // degrees the lever swings at 100% (lies flat into the base)
+  const MAX_ANGLE = 90; // angle when brake is 100% closed
 
   function updateLever(percent) {
     const angle = (percent / 100) * MAX_ANGLE;
