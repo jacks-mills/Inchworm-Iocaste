@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, Response, redirect, url_for
+from bleak import BleakScanner, BleakClient
 import random
 import threading
 import queue
@@ -6,12 +7,14 @@ import json
 import time
 import glob, os
 import asyncio
-from bleak import BleakScanner, BleakClient
+import zmq
 
 app = Flask(__name__)
 
 subscribers_lock = threading.Lock()
 subscribers = []  # subscribers receiving data from index_stream
+
+ZMQ_LISTEN_PORT = "5555"
 
 DEVICE_NAME = "BrakeController"
 
@@ -139,7 +142,7 @@ async def ble_run():
                 await client.stop_notify(NUS_TX_UUID)
 
         except Exception as e:
-            print(f"BLE: error — {e}")
+            print(f"BLE: error: {e}")
         finally:
             with ble_lock:
                 ble_client = None
@@ -154,7 +157,43 @@ def thread_ble():
     asyncio.set_event_loop(ble_loop)
     ble_loop.run_until_complete(ble_run())
 
+def thread_zmq_server():
+    context = zmq.Context()
+    socket = context.socket(zmq.PULL)
+    socket.bind(f"tcp://0.0.0.0:{ZMQ_LISTEN_PORT}")
+    print(f"ZeroMQ server listening on port {ZMQ_LISTEN_PORT}...")
+    while True:
+        try:
+            message_string = socket.recv_string()
+            payload = json.loads(message_string)
+
+            mtype = payload.get("message_type")
+            b64_image = payload.get("image_data")
+            width = payload.get("width")
+            height = payload.get("height")
+            distance = payload.get("distance")
+            angle = payload.get("angle")
+
+            if mtype == "image":
+                if b64_image and not b64_image.startswith("data:image"):
+                    b64_image = f"image/jpeg;base64,{b64_image}"
+                elif b64_image and b64_image.startswith("data:image/jpeg;base64,"):
+                    b64_image = b64_image.replace("data:image/jpeg;base64,", "image/jpeg,")
+                broadcast(f"image:{b64_image}")
+
+                if distance is not None:
+                    broadcast(f"distance:{distance}")
+
+        except json.JSONDecodeError:
+            print("Received malformed JSON string payload over ZeroMQ")
+            socket.send_string(json.dumps({"status": "JSON_ERROR"}))
+
+        except Exception as e:
+            print(f"Error handling ZeroMQ pipeline payload: {e}")
+            time.sleep(0.1)
+
 
 if __name__ == "__main__":
     threading.Thread(target=thread_ble, daemon=True).start()
+    threading.Thread(target=thread_zmq_server, daemon=True).start()
     app.run(debug=False, threaded=True)
